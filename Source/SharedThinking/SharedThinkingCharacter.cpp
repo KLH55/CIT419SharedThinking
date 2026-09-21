@@ -8,10 +8,17 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PhysicsEngine/PhysicsHandleComponent.h"
+#include "Components/SceneComponent.h"
+#include "Engine/World.h"
+#include "CollisionQueryParams.h"
 #include "SharedThinking.h"
 
 ASharedThinkingCharacter::ASharedThinkingCharacter()
 {
+
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 	
@@ -33,6 +40,12 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
 
+	PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("PhysicsHandle"));
+
+	HoldLocationComponent = CreateDefaultSubobject<USceneComponent>(TEXT("HoldLocation"));
+	HoldLocationComponent->SetupAttachment(FirstPersonCameraComponent);
+	HoldLocationComponent->SetRelativeLocation(FVector(130.0f, 0.0f, -20.0f));
+
 	// configure the character comps
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
@@ -42,6 +55,19 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+}
+
+void ASharedThinkingCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
+	{
+		FVector TargetLocation = HoldLocationComponent->GetComponentLocation();
+		FRotator TargetRotation = HoldLocationComponent->GetComponentRotation();
+
+		PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, TargetRotation);
+	}
 }
 
 void ASharedThinkingCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -59,6 +85,9 @@ void ASharedThinkingCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		// Looking/Aiming
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASharedThinkingCharacter::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ASharedThinkingCharacter::LookInput);
+
+		// Pickup/Drop
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ASharedThinkingCharacter::InteractInput);
 	}
 	else
 	{
@@ -85,6 +114,58 @@ void ASharedThinkingCharacter::LookInput(const FInputActionValue& Value)
 	// pass the axis values to the aim input
 	DoAim(LookAxisVector.X, LookAxisVector.Y);
 
+}
+
+void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
+{
+	// Drops if already carrying something
+	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
+	{
+		Drop();
+		return;
+	}
+
+	// Line trace from camera to see objects.
+	if (FirstPersonCameraComponent)
+	{
+		FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation();
+		FVector EndLocation = StartLocation + (FirstPersonCameraComponent->GetForwardVector() * InteractTraceDistance);
+
+		FHitResult HitResult;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_PhysicsBody, QueryParams);
+
+		if (bHit && HitResult.GetComponent())
+		{
+			UPrimitiveComponent* TargetComponent = HitResult.GetComponent();
+
+			if (TargetComponent->IsSimulatingPhysics())
+			{
+				Pickup(TargetComponent, HitResult.ImpactPoint, TargetComponent->GetComponentRotation());
+			}
+		}
+	}
+}
+
+void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation)
+{
+	if (!PhysicsHandle) return;
+
+	PhysicsHandle->SetTargetRotation(HitRotation);
+	PhysicsHandle->GrabComponentAtLocationWithRotation(
+		ComponentToPickUp,
+		NAME_None,
+		HitLocation,
+		HitRotation
+	);
+}
+
+void ASharedThinkingCharacter::Drop()
+{
+	if (!PhysicsHandle) return;
+	PhysicsHandle->ReleaseComponent();
 }
 
 void ASharedThinkingCharacter::DoAim(float Yaw, float Pitch)

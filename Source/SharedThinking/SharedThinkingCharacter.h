@@ -11,6 +11,8 @@ class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
+class UPhysicsHandleComponent;
+class USceneComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -31,6 +33,12 @@ class ASharedThinkingCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCameraComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Physics", meta = (AllowPrivateAccess = "true"))
+	UPhysicsHandleComponent* PhysicsHandle;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Physics", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* HoldLocationComponent;
+
 protected:
 
 	/** Jump Input Action */
@@ -48,17 +56,26 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
+
+	/** Interact Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* InteractAction;
 	
 public:
 	ASharedThinkingCharacter();
 
 protected:
 
+	virtual void Tick(float DeltaTime) override;
+
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);
 
 	/** Called from Input Actions for looking input */
 	void LookInput(const FInputActionValue& Value);
+
+	/** Called from Input Actions for picking up/dropping input */
+	void InteractInput(const FInputActionValue& Value);
 
 	/** Handles aim inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
@@ -75,6 +92,16 @@ protected:
 	/** Handles jump end inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	
+	void Pickup(UPrimitiveComponent* ComponentToPickup, FVector HitLocation, FRotator HitRotation);
+
+
+	void Drop();
+
+	/** Distance an item can be picked up*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	float InteractTraceDistance = 250.0f;
 
 protected:
 
