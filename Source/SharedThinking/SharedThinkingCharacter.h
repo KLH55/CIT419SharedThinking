@@ -33,10 +33,10 @@ class ASharedThinkingCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCameraComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Physics", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UPhysicsHandleComponent* PhysicsHandle;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Physics", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USceneComponent* HoldLocationComponent;
 
 protected:
@@ -93,10 +93,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
-	
+	/** Picks up an item*/
 	void Pickup(UPrimitiveComponent* ComponentToPickup, FVector HitLocation, FRotator HitRotation);
 
-
+	/** Drops held item*/
 	void Drop();
 
 	/** Distance an item can be picked up*/

@@ -16,7 +16,7 @@
 
 ASharedThinkingCharacter::ASharedThinkingCharacter()
 {
-
+	//Player can use ticks
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Set size for collision capsule
@@ -40,6 +40,7 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
 
+	// Physics for picking up and dropping items
 	PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("PhysicsHandle"));
 
 	HoldLocationComponent = CreateDefaultSubobject<USceneComponent>(TEXT("HoldLocation"));
@@ -57,6 +58,7 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	GetCharacterMovement()->AirControl = 0.5f;
 }
 
+// Tracking items location
 void ASharedThinkingCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -116,6 +118,7 @@ void ASharedThinkingCharacter::LookInput(const FInputActionValue& Value)
 
 }
 
+// How the player interacts with items
 void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 {
 	// Drops if already carrying something
@@ -149,6 +152,7 @@ void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 	}
 }
 
+// Picking up item in view
 void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation)
 {
 	if (!PhysicsHandle) return;
@@ -162,6 +166,7 @@ void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FV
 	);
 }
 
+// Dropping item being held
 void ASharedThinkingCharacter::Drop()
 {
 	if (!PhysicsHandle) return;
