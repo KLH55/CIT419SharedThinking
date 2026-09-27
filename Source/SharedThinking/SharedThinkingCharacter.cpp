@@ -63,10 +63,17 @@ void ASharedThinkingCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
+	if ((HasAuthority() || IsLocallyControlled()) && PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
 	{
-		FVector TargetLocation = HoldLocationComponent->GetComponentLocation();
-		FRotator TargetRotation = HoldLocationComponent->GetComponentRotation();
+		FRotator AimRotation = GetControlRotation();
+		FVector HandOffset = FVector(130.0f, 0.0f, -20.0f);
+
+		FVector BaseEyeLocation;
+		FRotator BaseEyeRotation;
+		GetActorEyesViewPoint(BaseEyeLocation, BaseEyeRotation);
+
+		FVector TargetLocation = BaseEyeLocation + AimRotation.RotateVector(HandOffset);
+		FRotator TargetRotation = AimRotation;
 
 		PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, TargetRotation);
 	}
@@ -121,6 +128,36 @@ void ASharedThinkingCharacter::LookInput(const FInputActionValue& Value)
 // How the player interacts with items
 void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 {
+	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
+	{
+		if (HasAuthority())
+		{
+			Drop();
+		}
+		else 
+		{
+			Server_Interact(FVector::ZeroVector, FVector::ZeroVector);
+		}
+		return;
+	}
+
+	if (FirstPersonCameraComponent)
+	{
+		FVector CameraLocation = FirstPersonCameraComponent->GetComponentLocation();
+		FVector CameraForward = FirstPersonCameraComponent->GetForwardVector();
+
+		Server_Interact(CameraLocation, CameraForward);
+	}
+
+}
+
+bool ASharedThinkingCharacter::Server_Interact_Validate(FVector TraceStart, FVector TraceDirection)
+{
+	return true;
+}
+
+void ASharedThinkingCharacter::Server_Interact_Implementation(FVector TraceStart, FVector TraceDirection)
+{
 	// Drops if already carrying something
 	if (PhysicsHandle && PhysicsHandle->GetGrabbedComponent())
 	{
@@ -128,26 +165,23 @@ void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 		return;
 	}
 
-	// Line trace from camera to see objects.
-	if (FirstPersonCameraComponent)
+
+		
+	FVector EndLocation = TraceStart + (TraceDirection * InteractTraceDistance);
+
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, EndLocation, ECC_PhysicsBody, QueryParams);
+
+	if (bHit && HitResult.GetComponent())
 	{
-		FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation();
-		FVector EndLocation = StartLocation + (FirstPersonCameraComponent->GetForwardVector() * InteractTraceDistance);
+		UPrimitiveComponent* TargetComponent = HitResult.GetComponent();
 
-		FHitResult HitResult;
-		FCollisionQueryParams QueryParams;
-		QueryParams.AddIgnoredActor(this);
-
-		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_PhysicsBody, QueryParams);
-
-		if (bHit && HitResult.GetComponent())
+		if (TargetComponent->IsSimulatingPhysics())
 		{
-			UPrimitiveComponent* TargetComponent = HitResult.GetComponent();
-
-			if (TargetComponent->IsSimulatingPhysics())
-			{
-				Pickup(TargetComponent, HitResult.ImpactPoint, TargetComponent->GetComponentRotation());
-			}
+			Pickup(TargetComponent, HitResult.ImpactPoint, TargetComponent->GetComponentRotation());
 		}
 	}
 }
@@ -155,6 +189,20 @@ void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 // Picking up item in view
 void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation)
 {
+	if (!ComponentToPickUp) return;
+	
+	if (HasAuthority())
+	{
+		ComponentToPickUp->WakeAllRigidBodies();
+
+		if (AActor* ComponentOwner = ComponentToPickUp->GetOwner())
+		{
+			ComponentOwner->SetOwner(this);
+		}
+
+		Multicast_Pickup(ComponentToPickUp, HitLocation, HitRotation);
+	}
+
 	if (!PhysicsHandle) return;
 
 	PhysicsHandle->SetTargetRotation(HitRotation);
@@ -166,11 +214,36 @@ void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FV
 	);
 }
 
+void ASharedThinkingCharacter::Multicast_Pickup_Implementation(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation)
+{
+	if (PhysicsHandle && ComponentToPickUp)
+	{
+		PhysicsHandle->SetTargetRotation(HitRotation);
+		PhysicsHandle->GrabComponentAtLocationWithRotation
+		(
+			ComponentToPickUp,
+			NAME_None,
+			HitLocation,
+			HitRotation
+		);
+	}
+}
+
 // Dropping item being held
 void ASharedThinkingCharacter::Drop()
 {
-	if (!PhysicsHandle) return;
-	PhysicsHandle->ReleaseComponent();
+	if (HasAuthority()) 
+	{
+		Multicast_Drop();
+	}
+}
+
+void ASharedThinkingCharacter::Multicast_Drop_Implementation() 
+{
+	if (PhysicsHandle) 
+	{
+		PhysicsHandle->ReleaseComponent();
+	}
 }
 
 void ASharedThinkingCharacter::DoAim(float Yaw, float Pitch)

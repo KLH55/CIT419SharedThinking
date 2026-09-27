@@ -51,11 +51,11 @@ protected:
 
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
-	class UInputAction* LookAction;
+	UInputAction* LookAction;
 
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
-	class UInputAction* MouseLookAction;
+	UInputAction* MouseLookAction;
 
 	/** Interact Input Action */
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -102,6 +102,19 @@ protected:
 	/** Distance an item can be picked up*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float InteractTraceDistance = 250.0f;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_Interact(FVector TraceStart, FVector TraceDirection);
+	void Server_Interact_Implementation(FVector TraceStart, FVector TraceDirection);
+	bool Server_Interact_Validate(FVector TraceStart, FVector TraceDirection);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_Pickup(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation);
+	void Multicast_Pickup_Implementation(UPrimitiveComponent* ComponentToPickUp, FVector HitLocation, FRotator HitRotation);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_Drop();
+	void Multicast_Drop_Implementation();
 
 protected:
 
