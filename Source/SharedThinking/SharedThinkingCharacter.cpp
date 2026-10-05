@@ -195,11 +195,6 @@ void ASharedThinkingCharacter::Pickup(UPrimitiveComponent* ComponentToPickUp, FV
 	{
 		ComponentToPickUp->WakeAllRigidBodies();
 
-		//if (AActor* ComponentOwner = ComponentToPickUp->GetOwner())
-		//{
-		//	ComponentOwner->SetOwner(this);
-		//}
-
 		Multicast_Pickup(ComponentToPickUp, HitLocation, HitRotation);
 	}
 
