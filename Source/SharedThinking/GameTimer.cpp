@@ -88,7 +88,7 @@ void AGameTimer::Stop()
 	FHttpModule* http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> request = http->CreateRequest();
 
-	request->SetURL(TEXT("https://webhook.site/6e67f156-0c3f-4aad-b7a8-ba589796dfbe"));
+	request->SetURL(TEXT("https://localhost:5109/api/leaderboard"));
 	request->SetVerb(TEXT("POST"));
 	request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 
