@@ -18,7 +18,9 @@ public class SharedThinking : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"Http",
+			"Json"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

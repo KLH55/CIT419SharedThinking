@@ -5,7 +5,7 @@
 #include "Engine/EngineTypes.h"
 #include "GameTimer.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTick, float, Elapsed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTick, float, elapsed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStopped, float, Final);
 
 UCLASS()
@@ -23,15 +23,15 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	FTimerHandle Handle;
+	FTimerHandle handle;
 
 	void Increment();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float Interval = 0.1f;
+	float interval = 0.1f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Elapsed, BlueprintReadOnly)
-	float Elapsed;
+	float elapsed;
 
 	UFUNCTION()
 	void OnRep_Elapsed();
@@ -48,4 +48,16 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FStopped OnStopped;
+
+	UPROPERTY(BlueprintReadWrite)
+	FString hostName = TEXT("TestHost");
+
+	UPROPERTY(BlueprintReadWrite)
+	FString clientName = TEXT("");
+
+	UPROPERTY(BlueprintReadWrite)
+	FString client2Name = TEXT("");
+
+	UPROPERTY(BlueprintReadWrite)
+	FString client3Name = TEXT("");
 };

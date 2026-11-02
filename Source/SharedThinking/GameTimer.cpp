@@ -4,11 +4,14 @@
 #include "GameTimer.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
 
 // Sets default values
 AGameTimer::AGameTimer()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	bAlwaysRelevant = true;
@@ -19,9 +22,9 @@ AGameTimer::AGameTimer()
 void AGameTimer::BeginPlay()
 {
 	Super::BeginPlay();
-	if (HasAuthority()) 
+	if (HasAuthority())
 	{
-		Elapsed = 0.0f;
+		elapsed = 0.0f;
 	}
 }
 
@@ -29,29 +32,29 @@ void AGameTimer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AGameTimer, Elapsed);
+	DOREPLIFETIME(AGameTimer, elapsed);
 }
 
 void AGameTimer::Start()
 {
 	if (!HasAuthority()) return;
 
-	if (GetWorld()) 
+	if (GetWorld())
 	{
-		GetWorldTimerManager().ClearTimer(Handle);
+		GetWorldTimerManager().ClearTimer(handle);
 	}
 
-	Elapsed = 0.0f;
+	elapsed = 0.0f;
 
-	OnTick.Broadcast(Elapsed);
+	OnTick.Broadcast(elapsed);
 
 	if (GetWorld())
 	{
 		GetWorldTimerManager().SetTimer(
-			Handle,
+			handle,
 			this,
 			&AGameTimer::Increment,
-			Interval,
+			interval,
 			true
 		);
 	}
@@ -61,23 +64,54 @@ void AGameTimer::Increment()
 {
 	if (!HasAuthority()) return;
 
-	Elapsed += Interval;
-	OnTick.Broadcast(Elapsed);
+	elapsed += interval;
+	OnTick.Broadcast(elapsed);
 }
 
 void AGameTimer::OnRep_Elapsed()
 {
-	OnTick.Broadcast(Elapsed);
+	OnTick.Broadcast(elapsed);
 }
 
 void AGameTimer::Stop()
 {
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Stop Called"));
+	
+	if (GetWorld() && handle.IsValid())
+	{
+		GetWorldTimerManager().ClearTimer(handle);
+		OnStopped.Broadcast(elapsed);
+	}
+
 	if (!HasAuthority()) return;
 
-	if (GetWorld() && Handle.IsValid())
-	{
-		GetWorldTimerManager().ClearTimer(Handle);
+	FHttpModule* http = &FHttpModule::Get();
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> request = http->CreateRequest();
 
-		OnStopped.Broadcast(Elapsed);
-	}
+	request->SetURL(TEXT("https://webhook.site/6e67f156-0c3f-4aad-b7a8-ba589796dfbe"));
+	request->SetVerb(TEXT("POST"));
+	request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+	int32 finalTime = FMath::RoundToInt(elapsed * 1000.0f);
+
+	auto formatJson = [](const FString& username)->FString
+	{
+		return (username.IsEmpty() || username.Equals(TEXT("None"))) ? TEXT("null") : FString::Printf(TEXT("\"%s\""), *username);
+	};
+
+	FString clientVal = formatJson(clientName);
+	FString client2Val = formatJson(client2Name);
+	FString client3Val = formatJson(client3Name);
+
+	FString jsonBody = FString::Printf(
+		TEXT("{\"elapsed_time\": %d, \"host\": \"%s\", \"client\": %s, \"client_2\": %s, \"client_3\": %s}"),
+		finalTime,
+		*hostName,
+		*clientVal,
+		*client2Val,
+		*client3Val
+	);
+
+	request->SetContentAsString(jsonBody);
+	request->ProcessRequest();
 }
