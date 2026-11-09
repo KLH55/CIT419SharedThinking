@@ -88,7 +88,7 @@ void AGameTimer::Stop()
 	FHttpModule* http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> request = http->CreateRequest();
 
-	request->SetURL(TEXT("https://localhost:5109/api/leaderboard"));
+	request->SetURL(TEXT("http://127.0.0.1"));
 	request->SetVerb(TEXT("POST"));
 	request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 
@@ -113,5 +113,17 @@ void AGameTimer::Stop()
 	);
 
 	request->SetContentAsString(jsonBody);
+	request->OnProcessRequestComplete().BindLambda([](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bSuccess)
+	{
+		if (bSuccess && Res.IsValid())
+		{
+			UE_LOG(LogTemp, Log, TEXT("MAMP Response: %s"), *Res->GetContentAsString());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Failed to reach MAMP script. Check if server is running."));
+		}
+	});
+
 	request->ProcessRequest();
 }
