@@ -20,7 +20,8 @@ public class SharedThinking : ModuleRules
 			"UMG",
 			"Slate",
 			"Http",
-			"Json"
+			"Json",
+			"JsonUtilities"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
