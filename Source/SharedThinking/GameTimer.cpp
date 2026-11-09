@@ -88,7 +88,7 @@ void AGameTimer::Stop()
 	FHttpModule* http = &FHttpModule::Get();
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> request = http->CreateRequest();
 
-	request->SetURL(TEXT("http://127.0.0.1"));
+	request->SetURL(TEXT("http://localhost/SharedThinking/save_session.php/"));
 	request->SetVerb(TEXT("POST"));
 	request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 
