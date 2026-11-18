@@ -1,0 +1,6 @@
+# The new C++ API bindings (NewAPICpp) and their Unreal wrappers (NewAPIUe) are
+# generated in the Core (vivox-sdk) repo and injected here at build time by
+# slave/copy_core_bindings.py. Core is the single source of truth, so these are
+# never committed to this repo.
+/NewAPICpp/
+/NewAPIUe/

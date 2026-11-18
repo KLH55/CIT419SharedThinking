@@ -21,7 +21,8 @@ public class SharedThinking : ModuleRules
 			"Slate",
 			"Http",
 			"Json",
-			"JsonUtilities"
+			"JsonUtilities",
+			"VivoxCore"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

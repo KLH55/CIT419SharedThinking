@@ -1,0 +1,30 @@
+{
+    "FileVersion": 3,
+    "Version": 1,
+    "VersionName": "5.29.0.unr.dev",
+    "FriendlyName": "Vivox Core Unreal",
+    "Description": "Plugin for access to the Vivox Voice network",
+    "Category": "Communications",
+    "CreatedBy": "Unity Technologies",
+    "CreatedByURL": "https://unity.com/products/vivox",
+    "DocsURL": "https://docs.unity.com/en-us/vivox-unreal",
+    "FabURL": "com.epicgames.launcher://ue/Fab/product/bcd7d2d7-35e4-47dd-bff2-6bcac8086f02",
+    "SupportURL": "https://support.unity.com/hc/en-us/sections/4407501155732-Vivox",
+    "CanContainContent": false,
+    "IsBetaVersion": false,
+    "Installed": true,
+    "Modules": [
+        {
+            "Name": "VivoxCore",
+            "Type": "Runtime",
+            "LoadingPhase": "Default",
+            "WhitelistPlatforms": [ "Win64" ]
+        },
+        {
+            "Name": "VivoxModeration",
+            "Type": "Runtime",
+            "LoadingPhase": "Default",
+            "WhitelistPlatforms": [ "Win64" ]
+        }
+    ]
+}

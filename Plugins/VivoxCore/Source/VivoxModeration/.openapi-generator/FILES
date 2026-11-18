@@ -1,0 +1,17 @@
+.openapi-generator-ignore
+Private/OpenAPIBaseModel.cpp
+Private/OpenAPIErrorsErrorResponseBody.cpp
+Private/OpenAPIHelpers.cpp
+Private/OpenAPIModelPlayersRequest.cpp
+Private/OpenAPIModelPostReportRequest.cpp
+Private/OpenAPIModelVivoxChannelRequest.cpp
+Private/OpenAPIReportApi.cpp
+Private/OpenAPIReportApiOperations.cpp
+Public/OpenAPIBaseModel.h
+Public/OpenAPIErrorsErrorResponseBody.h
+Public/OpenAPIHelpers.h
+Public/OpenAPIModelPlayersRequest.h
+Public/OpenAPIModelPostReportRequest.h
+Public/OpenAPIModelVivoxChannelRequest.h
+Public/OpenAPIReportApi.h
+Public/OpenAPIReportApiOperations.h
