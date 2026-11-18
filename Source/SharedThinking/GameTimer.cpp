@@ -7,18 +7,15 @@
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
+#include "GameFramework/Controller.h"
 
-// Sets default values
 AGameTimer::AGameTimer()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	bAlwaysRelevant = true;
-
 }
 
-// Called when the game starts or when spawned
 void AGameTimer::BeginPlay()
 {
 	Super::BeginPlay();
@@ -33,8 +30,50 @@ void AGameTimer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGameTimer, elapsed);
+	DOREPLIFETIME(AGameTimer, hostName);
+	DOREPLIFETIME(AGameTimer, clientName);
+	DOREPLIFETIME(AGameTimer, client2Name);
+	DOREPLIFETIME(AGameTimer, client3Name);
 }
 
+void AGameTimer::RegisterPlayerName(AController* PlayerController, const FString& PlayerName)
+{
+	if (!HasAuthority() || !PlayerController) return;
+
+	// If this controller is local to the Listen Server, it is the Host
+	if (PlayerController->IsLocalController())
+	{
+		hostName = PlayerName;
+		return;
+	}
+
+	// Otherwise, find or assign a client slot (0 = clientName, 1 = client2Name, 2 = client3Name)
+	int32 SlotIndex = RegisteredClientControllers.Find(PlayerController);
+	if (SlotIndex == INDEX_NONE)
+	{
+		if (RegisteredClientControllers.Num() < 3)
+		{
+			SlotIndex = RegisteredClientControllers.Add(PlayerController);
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	if (SlotIndex == 0)
+	{
+		clientName = PlayerName;
+	}
+	else if (SlotIndex == 1)
+	{
+		client2Name = PlayerName;
+	}
+	else if (SlotIndex == 2)
+	{
+		client3Name = PlayerName;
+	}
+}
 void AGameTimer::Start()
 {
 	if (!HasAuthority()) return;

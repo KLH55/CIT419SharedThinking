@@ -13,6 +13,7 @@ class UCameraComponent;
 class UInputAction;
 class UPhysicsHandleComponent;
 class USceneComponent;
+class UWidgetComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -39,6 +40,10 @@ class ASharedThinkingCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USceneComponent* HoldLocationComponent;
 
+	/** Overhead 3D Nameplate Widget */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UWidgetComponent* NameplateWidgetComp;
+
 protected:
 
 	/** Jump Input Action */
@@ -64,8 +69,15 @@ protected:
 public:
 	ASharedThinkingCharacter();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/** Called by your WBP input widget when the player submits their username */
+	UFUNCTION(BlueprintCallable, Category = "Player Name")
+	void SubmitPlayerName(const FString& NewName);
+
 protected:
 
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
 	/** Called from Input Actions for movement input */
@@ -116,6 +128,18 @@ protected:
 	void Multicast_Drop();
 	void Multicast_Drop_Implementation();
 
+	/** Replicated username displayed above the character */
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerName, BlueprintReadOnly, Category = "Player Name")
+	FString ReplicatedPlayerName;
+
+	UFUNCTION()
+	void OnRep_PlayerName();
+
+	void UpdateNameplateUI();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetPlayerName(const FString& NewName);
+
 protected:
 
 	/** Set up input action bindings */
@@ -131,4 +155,3 @@ public:
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
 };
-

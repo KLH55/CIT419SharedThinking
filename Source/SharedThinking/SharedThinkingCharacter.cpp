@@ -5,6 +5,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Components/TextBlock.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -12,7 +14,10 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "Net/UnrealNetwork.h"
 #include "SharedThinking.h"
+#include "GameTimer.h"
+#include "Kismet/GameplayStatics.h"
 
 ASharedThinkingCharacter::ASharedThinkingCharacter()
 {
@@ -47,6 +52,14 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	HoldLocationComponent->SetupAttachment(FirstPersonCameraComponent);
 	HoldLocationComponent->SetRelativeLocation(FVector(130.0f, 0.0f, -20.0f));
 
+	// Overhead Nameplate Widget Component
+	NameplateWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("NameplateWidgetComp"));
+	NameplateWidgetComp->SetupAttachment(RootComponent);
+	NameplateWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 115.0f));
+	NameplateWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+	NameplateWidgetComp->SetDrawAtDesiredSize(true);
+	NameplateWidgetComp->SetOwnerNoSee(true);
+
 	// configure the character comps
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
@@ -56,6 +69,21 @@ ASharedThinkingCharacter::ASharedThinkingCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+}
+
+void ASharedThinkingCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASharedThinkingCharacter, ReplicatedPlayerName);
+}
+
+void ASharedThinkingCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Ensure late-joining clients display existing player names immediately
+	UpdateNameplateUI();
 }
 
 // Tracking items location
@@ -76,6 +104,49 @@ void ASharedThinkingCharacter::Tick(float DeltaTime)
 		FRotator TargetRotation = AimRotation;
 
 		PhysicsHandle->SetTargetLocationAndRotation(TargetLocation, TargetRotation);
+	}
+}
+
+void ASharedThinkingCharacter::SubmitPlayerName(const FString& NewName)
+{
+	Server_SetPlayerName(NewName);
+}
+
+void ASharedThinkingCharacter::Server_SetPlayerName_Implementation(const FString& NewName)
+{
+	FString SanitizedName = NewName.TrimStartAndEnd().Left(20);
+	if (SanitizedName.IsEmpty())
+	{
+		SanitizedName = TEXT("Player");
+	}
+
+	ReplicatedPlayerName = SanitizedName;
+
+	// Find the AGameTimer actor in the level and register this player's name
+	if (AGameTimer* TimerActor = Cast<AGameTimer>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameTimer::StaticClass())))
+	{
+		TimerActor->RegisterPlayerName(GetController(), SanitizedName);
+	}
+
+	// Manually trigger OnRep so the Listen Server host also updates its UI
+	OnRep_PlayerName();
+}
+
+void ASharedThinkingCharacter::OnRep_PlayerName()
+{
+	UpdateNameplateUI();
+}
+
+void ASharedThinkingCharacter::UpdateNameplateUI()
+{
+	if (!NameplateWidgetComp) return;
+
+	if (UUserWidget* WidgetInstance = NameplateWidgetComp->GetUserWidgetObject())
+	{
+		if (UTextBlock* NameText = Cast<UTextBlock>(WidgetInstance->GetWidgetFromName(TEXT("PlayerNameText"))))
+		{
+			NameText->SetText(FText::FromString(ReplicatedPlayerName));
+		}
 	}
 }
 
@@ -104,7 +175,6 @@ void ASharedThinkingCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	}
 }
 
-
 void ASharedThinkingCharacter::MoveInput(const FInputActionValue& Value)
 {
 	// get the Vector2D move axis
@@ -112,7 +182,6 @@ void ASharedThinkingCharacter::MoveInput(const FInputActionValue& Value)
 
 	// pass the axis values to the move input
 	DoMove(MovementVector.X, MovementVector.Y);
-
 }
 
 void ASharedThinkingCharacter::LookInput(const FInputActionValue& Value)
@@ -122,7 +191,6 @@ void ASharedThinkingCharacter::LookInput(const FInputActionValue& Value)
 
 	// pass the axis values to the aim input
 	DoAim(LookAxisVector.X, LookAxisVector.Y);
-
 }
 
 // How the player interacts with items
@@ -148,7 +216,6 @@ void ASharedThinkingCharacter::InteractInput(const FInputActionValue& Value)
 
 		Server_Interact(CameraLocation, CameraForward);
 	}
-
 }
 
 bool ASharedThinkingCharacter::Server_Interact_Validate(FVector TraceStart, FVector TraceDirection)
@@ -164,8 +231,6 @@ void ASharedThinkingCharacter::Server_Interact_Implementation(FVector TraceStart
 		Drop();
 		return;
 	}
-
-
 		
 	FVector EndLocation = TraceStart + (TraceDirection * InteractTraceDistance);
 
@@ -271,6 +336,6 @@ void ASharedThinkingCharacter::DoJumpStart()
 
 void ASharedThinkingCharacter::DoJumpEnd()
 {
-	// pass StopJumping to the character
-	StopJumping();
+// pass StopJumping to the character
+StopJumping();
 }

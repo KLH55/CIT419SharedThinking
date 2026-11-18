@@ -14,13 +14,10 @@ class SHAREDTHINKING_API AGameTimer : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AGameTimer();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	FTimerHandle handle;
@@ -36,6 +33,10 @@ protected:
 	UFUNCTION()
 	void OnRep_Elapsed();
 
+	// Tracks which controller is assigned to client, client_2, and client_3 so re-submitting updates the right slot
+	UPROPERTY()
+	TArray<AController*> RegisteredClientControllers;
+
 public:	
 	UFUNCTION(BlueprintCallable)
 	void Start();
@@ -43,21 +44,25 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Stop();
 
+	/** Assigns a player's username to hostName, clientName, client2Name, or client3Name on the server */
+	UFUNCTION(BlueprintCallable, Category = "Player Names")
+	void RegisterPlayerName(AController* PlayerController, const FString& PlayerName);
+
 	UPROPERTY(BlueprintAssignable)
 	FTick OnTick;
 
 	UPROPERTY(BlueprintAssignable)
 	FStopped OnStopped;
 
-	UPROPERTY(BlueprintReadWrite)
-	FString hostName = TEXT("TestHost");
+	UPROPERTY(Replicated, BlueprintReadWrite)
+	FString hostName = TEXT("");
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(Replicated, BlueprintReadWrite)
 	FString clientName = TEXT("");
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(Replicated, BlueprintReadWrite)
 	FString client2Name = TEXT("");
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(Replicated, BlueprintReadWrite)
 	FString client3Name = TEXT("");
 };
